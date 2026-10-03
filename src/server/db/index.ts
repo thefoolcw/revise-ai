@@ -34,6 +34,11 @@ export async function getDb(): Promise<DB> {
   if (url.startsWith('file:') || url.startsWith('memory:')) {
     const { PGlite } = await import('@electric-sql/pglite');
     const dir = url.replace(/^file:/, '');
+    if (dir && !url.startsWith('memory:')) {
+      const { mkdirSync } = await import('node:fs');
+      const { dirname } = await import('node:path');
+      try { mkdirSync(dirname(dir), { recursive: true }); } catch {}
+    }
     const client = dir ? new PGlite(dir) : new PGlite();
     const db = drizzle(client, { schema });
     g.__reviseDb = db;

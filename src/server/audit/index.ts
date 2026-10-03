@@ -5,7 +5,7 @@ export type AuditAction =
   | 'ENTITLEMENT_MANUAL_GRANT' | 'MODEL_ENABLED' | 'MODEL_DISABLED' | 'MODEL_CATALOG_REFRESHED'
   | 'ROLE_CHANGED' | 'CONFIG_CHANGED' | 'ACCOUNT_DELETED' | 'USER_LOGIN' | 'USER_LOGIN_FAILED'
   | 'PASSWORD_RESET_REQUESTED' | 'PASSWORD_RESET_COMPLETED' | 'FLAG_CHANGED'
-  | 'DATA_EXPORTED' | 'SESSION_REVOKED';
+  | 'LESSON_PUBLICATION_UPDATED' | 'DATA_EXPORTED' | 'SESSION_REVOKED';
 
 /** Append-only privileged-action record. Metadata must already be secret-free. */
 export async function audit(input: {

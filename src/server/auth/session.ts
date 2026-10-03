@@ -42,8 +42,9 @@ export async function revokeAllSessions(userId: string) {
 }
 
 export type SessionUser = {
-  id: string; email: string; displayName: string; ageBand: string; country: string;
-  examBoardId: string | null; qualificationId: string | null; subjectIds: string[];
+  id: string; email: string; displayName: string; ageBand: string;
+  educationStage: string | null; yearGroup: string | null;
+  country: string; examBoardId: string | null; qualificationId: string | null; subjectIds: string[];
   explainLevel: string; defaultModelId: string | null; onboardedAt: Date | null; roles: string[];
 };
 
@@ -57,6 +58,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     .select({
       id: schema.users.id, email: schema.users.email, status: schema.users.status,
       displayName: schema.profiles.displayName, ageBand: schema.profiles.ageBand,
+      educationStage: schema.profiles.educationStage, yearGroup: schema.profiles.yearGroup,
       country: schema.profiles.country, examBoardId: schema.profiles.examBoardId,
       qualificationId: schema.profiles.qualificationId, subjectIds: schema.profiles.subjectIds,
       explainLevel: schema.profiles.explainLevel, defaultModelId: schema.profiles.defaultModelId,
@@ -77,8 +79,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const roles = await db.select({ role: schema.userRoles.role })
     .from(schema.userRoles).where(eq(schema.userRoles.userId, u.id));
   return {
-    id: u.id, email: u.email, displayName: u.displayName, ageBand: u.ageBand, country: u.country,
-    examBoardId: u.examBoardId, qualificationId: u.qualificationId,
+    id: u.id, email: u.email, displayName: u.displayName, ageBand: u.ageBand,
+    educationStage: u.educationStage ?? null, yearGroup: u.yearGroup ?? null,
+    country: u.country, examBoardId: u.examBoardId, qualificationId: u.qualificationId,
     subjectIds: Array.isArray(u.subjectIds) ? u.subjectIds : [],
     explainLevel: u.explainLevel, defaultModelId: u.defaultModelId, onboardedAt: u.onboardedAt,
     roles: roles.map((r) => r.role)

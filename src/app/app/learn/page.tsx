@@ -1,3 +1,5 @@
+import { LessonBrowser } from '@/components/app/LessonBrowser';
+import { FreeTierAdBanner } from '@/components/app/FreeTierAdBanner';
 import { CurriculumPicker } from '@/components/app/CurriculumPicker';
 import { getCurrentUser } from '@/server/auth/session';
 import { getDb, schema } from '@/server/db';
@@ -7,7 +9,7 @@ import { Alert } from '@/components/ui/primitives';
 export const metadata = { title: 'Curriculum' };
 export const dynamic = 'force-dynamic';
 
-export default async function LearnPage() {
+export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await getCurrentUser();
   if (!user) return null;
   const db = await getDb();
@@ -37,12 +39,16 @@ export default async function LearnPage() {
         </Alert>
       )}
 
+      <LessonBrowser userId={user.id} savedYear={user.yearGroup} subjects={subjects} params={await searchParams} />
+      <details className="card card-pad"><summary>Manage exam board, qualification & selected subjects</summary>
       <CurriculumPicker
         boards={boards.map((b) => ({ id: b.id, name: b.name, shortName: b.shortName, country: b.country }))}
         quals={quals.map((q) => ({ id: q.id, name: q.name, level: q.level, boards: (q.boards as string[]) ?? [] }))}
         subjects={subjects}
-        current={{ examBoardId: user.examBoardId, qualificationId: user.qualificationId, subjectIds: user.subjectIds }}
+        current={{ yearGroup: user.yearGroup, examBoardId: user.examBoardId, qualificationId: user.qualificationId, subjectIds: user.subjectIds }}
       />
+      </details>
+      <FreeTierAdBanner />
     </div>
   );
 }

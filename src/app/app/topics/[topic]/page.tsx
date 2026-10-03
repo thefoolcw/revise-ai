@@ -1,3 +1,4 @@
+import { EntitlementService } from '@/server/premium/entitlements';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { and, eq, sql } from 'drizzle-orm';
@@ -14,7 +15,11 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
   const db = await getDb();
 
   const [t] = await db.select().from(schema.topics).where(eq(schema.topics.id, topic)).limit(1);
-  if (!t) notFound();
+  if (!t || t.status !== 'PUBLISHED') notFound();
+  const access = await EntitlementService.hasPremium(user.id);
+  const lessonRows = await db.select({ id: schema.lessons.id, slug: schema.lessons.slug, title: schema.lessons.title, subtopic: schema.lessons.subtopicTitle, isPremium: schema.lessons.isPremium, status: schema.lessonProgress.status }).from(schema.lessons)
+    .leftJoin(schema.lessonProgress, and(eq(schema.lessonProgress.lessonId, schema.lessons.id), eq(schema.lessonProgress.userId, user.id)))
+    .where(and(eq(schema.lessons.topicSlug, t.slug), eq(schema.lessons.status, 'PUBLISHED'))).orderBy(schema.lessons.orderIndex);
 
   const [subject, children, parent] = await Promise.all([
     t.subjectId ? db.select({ id: schema.subjects.id, name: schema.subjects.name }).from(schema.subjects).where(eq(schema.subjects.id, t.subjectId)).limit(1) : Promise.resolve([]),
@@ -23,10 +28,12 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
     t.parentId ? db.select({ id: schema.topics.id, title: schema.topics.title }).from(schema.topics).where(eq(schema.topics.id, t.parentId)).limit(1) : Promise.resolve([])
   ]);
 
-  const [stat] = await db.execute(sql`
+  const statResult = await db.execute(sql`
     SELECT COUNT(*)::int AS n, COUNT(*) FILTER (WHERE qa.correct)::int AS correct
     FROM question_attempts qa JOIN questions q ON q.id = qa.question_id
-    WHERE qa.user_id = ${user.id} AND q.topic_id = ${t.id}`) as unknown as { n: number; correct: number }[] ?? [];
+    WHERE qa.user_id = ${user.id} AND q.topic_id = ${t.id}`);
+  const statRows = ((statResult as unknown as { rows?: { n: number; correct: number }[] }).rows ?? statResult) as unknown as { n: number; correct: number }[];
+  const stat = statRows[0];
   const n = Number(stat?.n ?? 0), correct = Number(stat?.correct ?? 0);
   const pct = n >= 3 ? Math.round((correct / n) * 100) : null;
 
@@ -76,6 +83,14 @@ export default async function TopicPage({ params }: { params: Promise<{ topic: s
         <Link href="/app/solve" className="btn btn-outline btn-sm">Solve a question</Link>
         <Link href="/app/planner" className="btn btn-outline btn-sm">Plan revision</Link>
       </div>
+
+      {lessonRows.length > 0 && <section className="stack gap-3">
+        <h2 className="h3">Lessons</h2>
+        {lessonRows.map(l => <Link className="card card-pad row spread wrap gap-2" key={l.id} href={`/app/lessons/${l.slug}`}>
+          <span><strong>{l.title}</strong><br /><span className="faint">{l.subtopic}</span></span>
+          <span className={l.isPremium ? 'chip chip-gold' : 'chip'}>{l.isPremium && !access.hasPremium ? 'Premium Locked' : l.status === 'COMPLETED' ? 'Completed' : l.status ? 'In Progress' : 'Not Started'}</span>
+        </Link>)}
+      </section>}
 
       {children.length > 0 && (
         <div className="card card-pad">

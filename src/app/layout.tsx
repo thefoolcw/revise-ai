@@ -20,12 +20,11 @@ export const metadata: Metadata = {
     description: 'AI tutoring and revision tools that work with your exam board and subject.',
     images: ['/og.png']
   },
-  icons: { icon: '/banner.png' },
   robots: { index: true, follow: true },
   alternates: { canonical: '/' }
 };
 
-export const viewport: Viewport = { themeColor: '#1f6d5b', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = { themeColor: '#1d4ed8', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,3 +1,4 @@
+import { getYearMeta, filterSubjectsForYear } from '@/server/curriculum/types';
 import { z } from 'zod';
 import { eq, sql, and } from 'drizzle-orm';
 import { handler } from '@/server/api/route';
@@ -5,6 +6,7 @@ import { getDb, schema } from '@/server/db';
 import { fuzzyMatch } from '@/server/curriculum/fuzzy';
 
 const Query = z.object({
+  year: z.string().refine(y => !!getYearMeta(y), 'Choose a supported year.').optional(),
   qualification: z.string().max(40).optional(),
   board: z.string().max(40).optional(),
   level: z.string().max(40).optional(),
@@ -19,7 +21,10 @@ export const GET = handler(async (ctx) => {
 
   const boards = await db.select().from(schema.examBoards).where(eq(schema.examBoards.status, 'ACTIVE'));
   const quals = await db.select().from(schema.qualifications).orderBy(schema.qualifications.orderIndex);
-  const subjects = await db.select().from(schema.subjects);
+  const allSubjects = await db.select().from(schema.subjects);
+
+  const year = q.year ?? ctx.user?.yearGroup;
+  const subjects = year ? filterSubjectsForYear(year, allSubjects) : allSubjects;
 
   // Only offer board/qualification combinations that actually exist (§05).
   const validBoardsFor = (qualId?: string) => {
@@ -35,7 +40,7 @@ export const GET = handler(async (ctx) => {
       id: schema.topics.id, slug: schema.topics.slug, title: schema.topics.title,
       parentId: schema.topics.parentId, subjectId: schema.topics.subjectId, provenance: schema.topics.provenance
     }).from(schema.topics)
-      .where(and(eq(schema.topics.subjectId, q.subject), eq(schema.topics.status, 'PUBLISHED')))
+      .where(and(eq(schema.topics.subjectId, q.subject), eq(schema.topics.status, 'PUBLISHED'), year ? eq(schema.topics.yearGroup, year) : undefined))
       .orderBy(schema.topics.orderIndex);
     topicList = rows;
   }

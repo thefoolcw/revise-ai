@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Select, Alert } from '@/components/ui/primitives';
 import { patch } from '@/lib/client';
+import { filterSubjectsForYear, getYearMeta } from '@/server/curriculum/types';
 import { useToast } from './Toaster';
 
 export type Board = { id: string; name: string; shortName: string; country: string };
@@ -19,7 +20,7 @@ export function CurriculumPicker({
   boards, quals, subjects, current
 }: {
   boards: Board[]; quals: Qual[]; subjects: Subject[];
-  current: { examBoardId: string | null; qualificationId: string | null; subjectIds: string[] };
+  current: { yearGroup: string | null; examBoardId: string | null; qualificationId: string | null; subjectIds: string[] };
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -36,11 +37,12 @@ export function CurriculumPicker({
     [selectedQual, boards]
   );
 
+  const yearSubjects = useMemo(() => filterSubjectsForYear(current.yearGroup, subjects), [current.yearGroup, subjects]);
   const filtered = useMemo(() => {
     const n = search.trim().toLowerCase();
-    if (!n) return subjects;
-    return subjects.filter((s) => s.name.toLowerCase().includes(n) || s.category.toLowerCase().includes(n) || s.id.includes(n));
-  }, [subjects, search]);
+    if (!n) return yearSubjects;
+    return yearSubjects.filter((s) => s.name.toLowerCase().includes(n) || s.category.toLowerCase().includes(n) || s.id.includes(n));
+  }, [yearSubjects, search]);
 
   const grouped = useMemo(() => {
     const m = new Map<string, Subject[]>();
@@ -52,7 +54,7 @@ export function CurriculumPicker({
     setBusy(true); setError(null);
     try {
       await patch('/api/me', {
-        examBoardId: boardId || null, qualificationId: qualId || null, subjectIds
+        examBoardId: boardId || null, qualificationId: qualId || null, ...(getYearMeta(current.yearGroup) ? { subjectIds: subjectIds.filter(id => yearSubjects.some(s => s.id === id)) } : {})
       });
       toast.push('Curriculum saved', 'success');
       router.refresh();

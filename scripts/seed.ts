@@ -5,7 +5,7 @@ async function main() {
   const { seedCurriculum } = await import('../src/server/curriculum/seed');
   const { closeDb } = await import('../src/server/db');
   const r = await seedCurriculum();
-  console.log(`[seed] boards=${r.boards} qualifications=${r.quals} subjects=${r.subjects} topics=${r.topics} aliases=${r.aliases} flags=${r.flags}`);
+  console.log(`[seed] boards=${r.boards} qualifications=${r.quals} subjects=${r.subjects} topics=${r.topics} lessons=${r.lessons} aliases=${r.aliases} flags=${r.flags}`);
   await closeDb();
   process.exit(0);
 }

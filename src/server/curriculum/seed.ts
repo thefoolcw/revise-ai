@@ -1,3 +1,4 @@
+import { curriculumLessons } from './catalogue';
 import { getDb, schema } from '../db';
 import { sql } from 'drizzle-orm';
 
@@ -179,7 +180,7 @@ export const FEATURE_FLAGS = [
   { key: 'new_tutor_ui', enabled: true, description: 'Streaming tutor workspace' }
 ] as const;
 
-export async function seedCurriculum(): Promise<{ boards: number; quals: number; subjects: number; topics: number; aliases: number; flags: number }> {
+export async function seedCurriculum(): Promise<{ boards: number; quals: number; subjects: number; topics: number; aliases: number; flags: number; lessons: number }> {
   const db = await getDb();
 
   for (const b of EXAM_BOARDS) {
@@ -221,11 +222,33 @@ export async function seedCurriculum(): Promise<{ boards: number; quals: number;
     }
   }
 
+  // Atomic upserts preserve lesson ids and therefore existing learner progress.
+  await db.transaction(async tx => {
+    const writtenTopics = new Set<string>();
+    for (const lesson of curriculumLessons) {
+      const { year, subject, topic, subtopic, ...fields } = lesson;
+      if (!writtenTopics.has(topic)) {
+        const topicRow = {
+          slug: topic, subjectId: subject, educationStage: lesson.educationStage,
+          yearGroup: year, title: lesson.topicTitle, orderIndex: lesson.orderIndex,
+          provenance: 'ORIGINAL', status: 'PUBLISHED'
+        };
+        await tx.insert(schema.topics).values({ id: topic, ...topicRow })
+          .onConflictDoUpdate({ target: schema.topics.slug, set: { ...topicRow, updatedAt: new Date() } });
+        writtenTopics.add(topic);
+        topicCount++;
+      }
+      const row = { ...fields, yearGroup: year, subjectId: subject, topicSlug: topic, subtopicTitle: subtopic };
+      await tx.insert(schema.lessons).values(row)
+        .onConflictDoUpdate({ target: schema.lessons.id, set: { ...row, isPremium: sql`${schema.lessons.isPremium}`, updatedAt: new Date() } });
+    }
+  });
+
   for (const f of FEATURE_FLAGS) {
     await db.insert(schema.featureFlags).values({ ...f }).onConflictDoNothing();
   }
 
-  return { boards: EXAM_BOARDS.length, quals: QUALIFICATIONS.length, subjects: SUBJECTS.length, topics: topicCount, aliases: aliasCount, flags: FEATURE_FLAGS.length };
+  return { boards: EXAM_BOARDS.length, quals: QUALIFICATIONS.length, subjects: SUBJECTS.length, topics: topicCount, aliases: aliasCount, flags: FEATURE_FLAGS.length, lessons: curriculumLessons.length };
 }
 
 export function slugify(s: string): string {
