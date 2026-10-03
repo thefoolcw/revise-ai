@@ -255,6 +255,7 @@ const SIXTH_FORM_SUBJECTS = [
 ];
 
 const UNIVERSITY_SUBJECTS = [
+  'law',
   'uni-coding',
   'computer-science',
   'maths',

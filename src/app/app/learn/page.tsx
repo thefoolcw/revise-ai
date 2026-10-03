@@ -1,3 +1,4 @@
+import { getSubjectAvailability } from '@/server/curriculum/availability';
 import { LessonBrowser } from '@/components/app/LessonBrowser';
 import { FreeTierAdBanner } from '@/components/app/FreeTierAdBanner';
 import { CurriculumPicker } from '@/components/app/CurriculumPicker';
@@ -13,6 +14,7 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
   const user = await getCurrentUser();
   if (!user) return null;
   const db = await getDb();
+  const availability = await getSubjectAvailability();
 
   const [boards, quals, subjects, specs] = await Promise.all([
     db.select().from(schema.examBoards).where(eq(schema.examBoards.status, 'ACTIVE')),
@@ -39,9 +41,9 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
         </Alert>
       )}
 
-      <LessonBrowser userId={user.id} savedYear={user.yearGroup} subjects={subjects} params={await searchParams} />
+      <LessonBrowser availability={availability} userId={user.id} savedYear={user.yearGroup} subjects={subjects} params={await searchParams} />
       <details className="card card-pad"><summary>Manage exam board, qualification & selected subjects</summary>
-      <CurriculumPicker
+      <CurriculumPicker availability={availability}
         boards={boards.map((b) => ({ id: b.id, name: b.name, shortName: b.shortName, country: b.country }))}
         quals={quals.map((q) => ({ id: q.id, name: q.name, level: q.level, boards: (q.boards as string[]) ?? [] }))}
         subjects={subjects}

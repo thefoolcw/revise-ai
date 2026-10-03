@@ -139,3 +139,55 @@ it('protects content management and excludes draft lessons from direct reads and
     await editPublication(request('/api/admin/content', { lessonId: free.id, status: 'PUBLISHED' }, 'PATCH'));
   }
 });
+
+it('publishes the same lesson-backed subjects for selection and rejects empty courses server-side', async () => {
+  const { getSubjectAvailability } = await import('../../src/server/curriculum/availability');
+  const { GET: catalogue } = await import('../../src/app/api/curriculum/route');
+  const user = await makeUser(); await signIn(user.id);
+  const availability = await getSubjectAvailability();
+  expect(availability['uni-year-1']).toContain('law');
+  expect(availability['uni-year-2']).not.toContain('law');
+  const catalogResponse = await catalogue(new NextRequest('http://localhost/api/curriculum?year=uni-year-1'));
+  const catalog = await catalogResponse.json();
+  expect(catalog.data.subjects.map((s: { id: string }) => s.id)).toEqual(availability['uni-year-1']);
+  expect((await PATCH(request('/api/me', { yearGroup: 'uni-year-1', subjectIds: ['law'], completeOnboarding: true }, 'PATCH'))).status).toBe(200);
+  expect((await getCurrentUser())!.yearGroup).toBe('uni-year-1');
+  expect((await getCurrentUser())!.subjectIds).toEqual(['law']);
+  const rejected = await PATCH(request('/api/me', { yearGroup: 'uni-year-2', subjectIds: ['law'] }, 'PATCH'));
+  expect(rejected.status).toBe(422);
+  expect((await getCurrentUser())!.yearGroup).toBe('uni-year-1');
+  expect((await searchLessons({ year: 'uni-year-1', q: 'LLB' })).total).toBe(16);
+  expect((await searchLessons({ year: 'uni-year-1', q: 'Law' })).total).toBe(16);
+  expect((await searchLessons({ year: 'uni-year-1', q: 'judicial review' })).total).toBeGreaterThan(0);
+});
+
+it('removes a subject from availability when publication breaks required topic access coverage', async () => {
+  const { getSubjectAvailability } = await import('../../src/server/curriculum/availability');
+  const lesson = curriculumLessons.find(l => l.subject === 'law' && !l.isPremium)!;
+  const db = await getDb();
+  try {
+    await db.update(schema.lessons).set({ status: 'DRAFT' }).where(eq(schema.lessons.id, lesson.id));
+    expect((await getSubjectAvailability())['uni-year-1']).not.toContain('law');
+  } finally {
+    await db.update(schema.lessons).set({ status: 'PUBLISHED' }).where(eq(schema.lessons.id, lesson.id));
+  }
+  expect((await getSubjectAvailability())['uni-year-1']).toContain('law');
+});
+
+it('keeps qualification stage consistent with the explicit year', async () => {
+  const user = await makeUser(); await signIn(user.id);
+  const invalid = await PATCH(request('/api/me', { yearGroup: 'year-12', subjectIds: ['further-maths'], qualificationId: 'gcse' }, 'PATCH'));
+  expect(invalid.status).toBe(422);
+  const valid = await PATCH(request('/api/me', { yearGroup: 'year-12', subjectIds: ['further-maths'] }, 'PATCH'));
+  expect(valid.status).toBe(200);
+  expect((await getCurrentUser())!.qualificationId).toBe('alevel');
+  expect((await getCurrentUser())!.yearGroup).toBe('year-12');
+});
+
+it('does not reset a saved compatible qualification when managing same-year subjects', async () => {
+  const user = await makeUser(); await signIn(user.id);
+  expect((await PATCH(request('/api/me', { yearGroup: 'year-12', subjectIds: ['further-maths'], qualificationId: 'cambridge-as-a', examBoardId: 'cambridge' }, 'PATCH'))).status).toBe(200);
+  expect((await PATCH(request('/api/me', { yearGroup: 'year-12', subjectIds: [] }, 'PATCH'))).status).toBe(200);
+  expect((await getCurrentUser())!.qualificationId).toBe('cambridge-as-a');
+  expect((await getCurrentUser())!.examBoardId).toBe('cambridge');
+});

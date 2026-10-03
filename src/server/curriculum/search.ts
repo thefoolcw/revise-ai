@@ -23,7 +23,10 @@ export async function searchLessons(input: LessonSearchInput) {
     query.topic ? ilike(l.topicTitle, like(query.topic)) : undefined,
     query.difficulty ? eq(l.difficulty, query.difficulty) : undefined,
     query.access ? eq(l.isPremium, query.access === 'premium') : undefined,
-    query.q ? or(ilike(l.title, like(query.q)), ilike(l.description, like(query.q)), ilike(l.topicTitle, like(query.q)), ilike(l.subtopicTitle, like(query.q))) : undefined
+    query.q ? or(ilike(l.title, like(query.q)), ilike(l.description, like(query.q)), ilike(l.topicTitle, like(query.q)), ilike(l.subtopicTitle, like(query.q)),
+      sql`exists (select 1 from ${schema.subjects} where ${schema.subjects.id} = ${l.subjectId} and ${schema.subjects.name} ilike ${like(query.q)})`,
+      sql`exists (select 1 from ${schema.subjectAliases} where ${schema.subjectAliases.subjectId} = ${l.subjectId} and ${schema.subjectAliases.alias} ilike ${like(query.q)})`
+    ) : undefined
   );
   // Explicit metadata projection: Premium body, examples and answers cannot leak through search.
   const [items, count] = await Promise.all([

@@ -1,3 +1,4 @@
+import type { SubjectAvailability } from '@/server/curriculum/selection';
 import { YearSubjectFields } from './YearSubjectFields';
 import Link from 'next/link';
 import { getYearMeta } from '@/server/curriculum/types';
@@ -5,8 +6,8 @@ import { LessonSearch, searchLessons } from '@/server/curriculum/search';
 import { EntitlementService } from '@/server/premium/entitlements';
 
 type Params = Record<string, string | string[] | undefined>;
-export async function LessonBrowser({ userId, savedYear, subjects, params }: {
-  userId: string; savedYear: string | null; subjects: { id: string; name: string }[]; params: Params;
+export async function LessonBrowser({ userId, savedYear, subjects, params, availability }: {
+  availability: SubjectAvailability; userId: string; savedYear: string | null; subjects: { id: string; name: string }[]; params: Params;
 }) {
   const flat = Object.fromEntries(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
   const year = getYearMeta(flat.year ?? savedYear);
@@ -21,7 +22,7 @@ export async function LessonBrowser({ userId, savedYear, subjects, params }: {
     <p className="muted">Browse another year without changing your profile. Original lessons are not an exam-board-verified syllabus.</p>
     <form action="/app/learn" className="card card-pad stack gap-3">
       <div style={{ display: 'grid', gap: '0.8rem', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
-        <YearSubjectFields key={`${year?.id}-${flat.subject ?? ""}`} initialYear={year?.id ?? ""} initialSubject={flat.subject ?? ""} subjects={subjects} />
+        <YearSubjectFields availability={availability} key={`${year?.id}-${flat.subject ?? ""}`} initialYear={year?.id ?? ""} initialSubject={flat.subject ?? ""} subjects={subjects} />
         <label className="stack gap-1">Search<input className="input" name="q" maxLength={120} defaultValue={flat.q} placeholder="Title, concept or topic" /></label>
         <label className="stack gap-1">Topic<input className="input" name="topic" maxLength={120} defaultValue={flat.topic} /></label>
         <label className="stack gap-1">Difficulty<select className="input" name="difficulty" defaultValue={flat.difficulty ?? ''}><option value="">All levels</option>{['Foundation', 'Core', 'Higher', 'Advanced'].map(d => <option key={d}>{d}</option>)}</select></label>

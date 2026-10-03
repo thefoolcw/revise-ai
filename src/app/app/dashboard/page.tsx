@@ -1,3 +1,5 @@
+import { publishedSubjects } from '@/server/curriculum/selection';
+import { getSubjectAvailability } from '@/server/curriculum/availability';
 import { SubjectManager } from '@/components/app/SubjectManager';
 import { getYearMeta, filterSubjectsForYear } from '@/server/curriculum/types';
 import Link from 'next/link';
@@ -17,9 +19,10 @@ export default async function Dashboard() {
   const user = await getCurrentUser();
   if (!user) return null;
   const db = await getDb();
+  const availability = await getSubjectAvailability();
   const availableSubjects = await db.select({ id: schema.subjects.id, name: schema.subjects.name }).from(schema.subjects);
   const year = getYearMeta(user.yearGroup);
-  const validSubjects = filterSubjectsForYear(user.yearGroup, availableSubjects);
+  const validSubjects = publishedSubjects(user.yearGroup, filterSubjectsForYear(user.yearGroup, availableSubjects), availability);
   const mySubjects = validSubjects.filter(s => user.subjectIds.includes(s.id));
   const since = new Date(Date.now() - 29 * 864e5);
 
@@ -65,7 +68,7 @@ export default async function Dashboard() {
       <section className="card card-pad stack gap-3" aria-labelledby="my-subjects-title">
         <div className="row spread wrap gap-2">
           <div><h2 id="my-subjects-title" className="h3">MY SUBJECTS</h2><p className="muted">{year?.fullLabel ?? 'Choose your year in Settings'}</p></div>
-          {year ? <SubjectManager yearGroup={year.id} selectedIds={user.subjectIds} subjects={validSubjects} /> : <Link href="/app/settings">Choose year & subjects →</Link>}
+          {year ? <SubjectManager availability={availability} yearGroup={year.id} selectedIds={user.subjectIds} subjects={availableSubjects} /> : <Link href="/app/settings">Choose year & subjects →</Link>}
         </div>
         {mySubjects.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.8rem' }}>
           {mySubjects.map(s => <Link className="card card-pad" key={s.id} href={`/app/subjects/${s.id}`}>{s.name} →</Link>)}

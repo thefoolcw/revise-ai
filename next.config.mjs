@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  allowedDevOrigins: ['*.e2b.app'],
+  allowedDevOrigins: ['*.e2b.app', 'localhost', '127.0.0.1'],
   serverExternalPackages: ['@electric-sql/pglite', 'pg'],
   poweredByHeader: false,
   async headers() {

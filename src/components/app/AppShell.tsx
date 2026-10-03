@@ -65,7 +65,7 @@ export function AppShell({
   };
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'grid', gridTemplateColumns: 'var(--rail, 0px) 1fr' }} className="app-grid">
+    <div style={{ minHeight: '100dvh', display: 'grid', gridTemplateColumns: 'var(--app-columns, minmax(0, 1fr))' }} className="app-grid">
       {/* ── Desktop rail ─────────────────────────────────────── */}
       <aside className="app-rail" style={{
         borderRight: '1px solid var(--border)', background: 'var(--surface-2)',
@@ -125,7 +125,7 @@ export function AppShell({
         </div>
       </div>
 
-      <main id="main" style={{ padding: '1.5rem 1.25rem 6rem', maxWidth: 1180, width: '100%', marginInline: 'auto' }}>
+      <main id="main" style={{ padding: '1.5rem 1.25rem 6rem', maxWidth: 1180, minWidth: 0, width: '100%', marginInline: 'auto' }}>
         {children}
       </main>
 
@@ -156,11 +156,12 @@ export function AppShell({
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} isAdmin={isAdmin} />
 
       <style>{`
-        .app-grid { --rail: 0px; }
-        .app-rail, .app-topbar { display: none; }
+        .app-grid { --app-columns: minmax(0, 1fr); }
+        .app-rail { display: none !important; }
+        .app-topbar { display: flex; }
         .app-bottomnav { display: grid; }
         @media (min-width: 980px) {
-          .app-grid { --rail: 236px; }
+          .app-grid { --app-columns: 236px minmax(0, 1fr); }
           .app-rail { display: flex !important; }
           .app-topbar, .app-bottomnav { display: none !important; }
           main { padding-bottom: 3rem !important; }

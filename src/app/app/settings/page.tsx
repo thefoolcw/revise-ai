@@ -1,3 +1,4 @@
+import { getSubjectAvailability } from '@/server/curriculum/availability';
 import { SubjectManager } from '@/components/app/SubjectManager';
 import { SettingsForm } from '@/components/app/SettingsForm';
 import { getCurrentUser } from '@/server/auth/session';
@@ -11,6 +12,7 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const db = await getDb();
+  const availability = await getSubjectAvailability();
   const subjects = await db.select({ id: schema.subjects.id, name: schema.subjects.name }).from(schema.subjects);
   const [board, qual] = await Promise.all([
     user.examBoardId ? db.select({ name: schema.examBoards.name }).from(schema.examBoards).where(eq(schema.examBoards.id, user.examBoardId)).limit(1) : Promise.resolve([]),
@@ -28,7 +30,7 @@ export default async function SettingsPage() {
       <section className="card card-pad stack gap-2">
         <h2 className="h3">Year group & subjects</h2>
         <p className="muted">Manage your learning choices without repeating onboarding.</p>
-        <SubjectManager yearGroup={user.yearGroup} selectedIds={user.subjectIds} subjects={subjects} allowYearChange />
+        <SubjectManager availability={availability} yearGroup={user.yearGroup} selectedIds={user.subjectIds} subjects={subjects} allowYearChange />
       </section>
       <SettingsForm
         profile={{ displayName: user.displayName, explainLevel: user.explainLevel, defaultModelId: user.defaultModelId }}

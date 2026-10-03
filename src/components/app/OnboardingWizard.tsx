@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Select, Alert, ProgressBar, Chip } from '@/components/ui/primitives';
 import { Brand } from './Brand';
+import { publishedSubjects, type SubjectAvailability } from '@/server/curriculum/selection';
 import { patch } from '@/lib/client';
 import {
   EDUCATION_STAGES,
@@ -24,12 +25,14 @@ export function OnboardingWizard({
   boards,
   quals,
   subjects,
-  displayName
+  displayName,
+  availability
 }: {
   boards: Board[];
   quals: Qual[];
   subjects: Subject[];
   displayName: string;
+  availability: SubjectAvailability;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -57,8 +60,8 @@ export function OnboardingWizard({
   const selectedYearMeta = useMemo(() => getYearMeta(f.yearGroup), [f.yearGroup]);
 
   const yearSubjects = useMemo(() => {
-    return filterSubjectsForYear(f.yearGroup, subjects);
-  }, [f.yearGroup, subjects]);
+    return publishedSubjects(f.yearGroup, filterSubjectsForYear(f.yearGroup, subjects), availability);
+  }, [f.yearGroup, subjects, availability]);
 
   const filteredSubjects = useMemo(() => {
     const n = f.search.trim().toLowerCase();
@@ -87,7 +90,7 @@ export function OnboardingWizard({
   const selectYear = (yearId: YearGroupId) => {
     const meta = getYearMeta(yearId);
     if (!meta) return;
-    const allowedSet = new Set(meta.subjectIds);
+    const allowedSet = new Set(availability[yearId] ?? []);
     const validExistingSubjects = f.subjectIds.filter((id) => allowedSet.has(id));
     setF((prev) => ({
       ...prev,
@@ -110,7 +113,7 @@ export function OnboardingWizard({
   };
 
   const canContinue = [
-    !!f.yearGroup && !!f.educationStage,
+    !!f.yearGroup && !!f.educationStage && yearSubjects.length > 0,
     f.subjectIds.length > 0,
     true
   ][step];
@@ -270,6 +273,8 @@ export function OnboardingWizard({
                                 <button
                                   key={yr.id}
                                   type="button"
+                                  disabled={!availability[yr.id]?.length}
+                                  title={!availability[yr.id]?.length ? "No published courses for this year" : undefined}
                                   onClick={() => selectYear(yr.id)}
                                   aria-pressed={active}
                                   className={`card card-interactive ${active ? 'card-selected' : ''}`}
@@ -477,7 +482,7 @@ export function OnboardingWizard({
                   onChange={(e) => setF({ ...f, qualificationId: e.target.value })}
                 >
                   <option value="">Automatic for {selectedYearMeta?.label ?? 'year'}</option>
-                  {quals.map((q) => (
+                  {quals.filter(q => q.level === selectedYearMeta?.ageBand).map((q) => (
                     <option key={q.id} value={q.id}>{q.name}</option>
                   ))}
                 </Select>

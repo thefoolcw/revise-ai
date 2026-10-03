@@ -1,3 +1,6 @@
+import { getYearMeta } from '@/server/curriculum/types';
+import { getSubjectAvailability } from '@/server/curriculum/availability';
+import { assertPublishedSelection } from '@/server/curriculum/selection';
 import { curriculumProfileUpdate } from '@/server/curriculum/profile';
 import { z } from 'zod';
 import { eq, like } from 'drizzle-orm';
@@ -79,7 +82,24 @@ export const PATCH = handler(async (ctx, body) => {
   if (patch.defaultModelId !== undefined) update.defaultModelId = patch.defaultModelId;
   if (patch.theme !== undefined) update.theme = patch.theme;
   if (patch.reducedMotion !== undefined) update.reducedMotion = patch.reducedMotion;
-  Object.assign(update, curriculumProfileUpdate(u, patch));
+  const curriculumUpdate = curriculumProfileUpdate(u, patch);
+  if (curriculumUpdate.yearGroup && (patch.subjectIds !== undefined || patch.yearGroup !== undefined || patch.completeOnboarding)) {
+    assertPublishedSelection(u, curriculumUpdate.yearGroup, curriculumUpdate.subjectIds ?? [], await getSubjectAvailability(), !!patch.completeOnboarding);
+  }
+  Object.assign(update, curriculumUpdate);
+  const year = getYearMeta(curriculumUpdate.yearGroup ?? u.yearGroup);
+  if (patch.qualificationId || (patch.yearGroup && patch.yearGroup !== u.yearGroup && patch.qualificationId === undefined)) {
+    const qualificationId = patch.qualificationId || year?.defaultQualificationId;
+    const [qualification] = qualificationId ? await db.select().from(schema.qualifications)
+      .where(eq(schema.qualifications.id, qualificationId)).limit(1) : [];
+    if (!year || !qualification || qualification.level !== year.ageBand) {
+      throw new z.ZodError([{ code: 'custom', path: ['qualificationId'], message: 'Choose a qualification for your selected education stage and year.' }]);
+    }
+    update.qualificationId = qualification.id;
+    // Do not carry an incompatible board into a new pathway.
+    const board = patch.examBoardId !== undefined ? patch.examBoardId : u.examBoardId;
+    if (board && !qualification.boards.includes(board)) update.examBoardId = null;
+  }
   if (patch.completeOnboarding) {
     update.onboardedAt = new Date();
   }

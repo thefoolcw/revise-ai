@@ -3,12 +3,13 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ALL_YEAR_GROUPS, getYearMeta, filterSubjectsForYear } from '@/server/curriculum/types';
+import { publishedSubjects, type SubjectAvailability } from '@/server/curriculum/selection';
 import { patch } from '@/lib/client';
 import { Button, Alert, Input, Select } from '@/components/ui/primitives';
 
 type Subject = { id: string; name: string };
-export function SubjectManager({ yearGroup, selectedIds, subjects, allowYearChange = false }: {
-  yearGroup: string | null; selectedIds: string[]; subjects: Subject[]; allowYearChange?: boolean;
+export function SubjectManager({ yearGroup, selectedIds, subjects, availability, allowYearChange = false }: {
+  yearGroup: string | null; selectedIds: string[]; subjects: Subject[]; availability: SubjectAvailability; allowYearChange?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -17,7 +18,10 @@ export function SubjectManager({ yearGroup, selectedIds, subjects, allowYearChan
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const valid = filterSubjectsForYear(year, subjects);
+  const yearValid = filterSubjectsForYear(year, subjects);
+  const available = publishedSubjects(year, yearValid, availability);
+  const retained = year === yearGroup ? yearValid.filter(s => selectedIds.includes(s.id) && !available.some(a => a.id === s.id)) : [];
+  const valid = [...available, ...retained];
   const visible = valid.filter(s => s.name.toLowerCase().includes(query.toLowerCase()));
 
   async function save() {
@@ -42,18 +46,18 @@ export function SubjectManager({ yearGroup, selectedIds, subjects, allowYearChan
         {error && <Alert tone="danger" title="Could not save">{error}</Alert>}
         {allowYearChange ? <Select name="manageYear" label="Year group" value={year} onChange={e => {
           const next = e.target.value; setYear(next);
-          setSelected(ids => ids.filter(id => getYearMeta(next)?.subjectIds.includes(id)));
+          setSelected(ids => ids.filter(id => availability[next]?.includes(id)));
         }}>
           <option value="" disabled>Choose your year</option>
-          {ALL_YEAR_GROUPS.map(y => <option key={y.id} value={y.id}>{y.fullLabel}</option>)}
+          {ALL_YEAR_GROUPS.map(y => <option key={y.id} value={y.id} disabled={!availability[y.id]?.length && y.id !== yearGroup}>{y.fullLabel}</option>)}
         </Select> : <p>{getYearMeta(year)?.fullLabel ?? 'Choose a year in Settings first.'}</p>}
         {allowYearChange && <p className="muted">When you change year, only subjects offered in the new year remain selected. Your previous study progress is kept.</p>}
         <Input name="manageSubjectsSearch" label="Search subjects" value={query} onChange={e => setQuery(e.target.value)} />
         <fieldset className="stack gap-2" disabled={busy}>
           <legend className="sr-only">Subjects for your selected year</legend>
           {visible.map(s => <label key={s.id} className="card card-pad row gap-2">
-            <input type="checkbox" checked={selected.includes(s.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, s.id] : ids.filter(id => id !== s.id))} />
-            {s.name}
+            <input type="checkbox" checked={selected.includes(s.id)} disabled={!available.some(a => a.id === s.id) && !selected.includes(s.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, s.id] : ids.filter(id => id !== s.id))} />
+            {s.name}{!available.some(a => a.id === s.id) && <small className="muted"> — saved selection; course unavailable</small>}
           </label>)}
           {!visible.length && <p>No subjects match. Try another search or select your year.</p>}
         </fieldset>
