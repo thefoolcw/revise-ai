@@ -2,12 +2,12 @@
   "name": "revise-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Revise AI \u2014 curriculum-aware revision platform from Nursery to University",
+  "description": "Revise AI — curriculum-aware revision platform from Nursery to University",
   "scripts": {
     "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 3000 -H 0.0.0.0",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
@@ -15,7 +15,8 @@
     "db:setup": "npm run db:generate && npm run db:migrate && npm run db:seed",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:with-migrate": "npm run db:migrate && next build"
+    "build:with-migrate": "npm run db:migrate && next build",
+    "curriculum:check": "tsx scripts/check-curriculum.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",
@@ -27,6 +28,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/forms": "^0.5.10",
     "@types/node": "^22.10.7",
     "@types/pg": "^8.11.10",
@@ -34,6 +36,8 @@
     "@types/react-dom": "19.0.3",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.27",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",

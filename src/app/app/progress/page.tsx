@@ -1,3 +1,5 @@
+import { getLessonProgressSummary } from '@/server/curriculum/progress';
+import { getYearMeta } from '@/server/curriculum/types';
 import { Reveal } from '@/components/motion/Reveal';
 import { CountUp } from '@/components/motion/CountUp';
 import { ProgressBar, Alert, EmptyState } from '@/components/ui/primitives';
@@ -11,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProgressPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const p = await computeProgress(user.id);
+  const [p, lessons] = await Promise.all([computeProgress(user.id), getLessonProgressSummary(user.id)]);
 
   const empty = p.questions.attempted === 0 && p.quizzes.attempts === 0 && p.flashcards.reviews === 0 && p.studyMinutes === 0;
 
@@ -26,7 +28,16 @@ export default async function ProgressPage() {
         </header>
       </Reveal>
 
-      {empty && (
+      <section className="card card-pad stack gap-3">
+        <h2 className="h3">Lesson progress · all time</h2>
+        <p>{lessons.completed} completed / {lessons.started} started</p>
+        <ProgressBar value={lessons.completed} max={Math.max(lessons.started, 1)} label="Started lessons completed" />
+        <p className="muted">{lessons.confident} of {lessons.attempted} practised activities marked confident. These are learner or guardian reflections, not automatically assessed exam marks.</p>
+        <ul className="stack gap-2">{lessons.recent.map(l => <li key={l.lessonId}><Link href={`/app/lessons/${l.slug}`}>{l.title}</Link> · {getYearMeta(l.year)?.fullLabel} · {l.status === 'COMPLETED' ? 'Completed' : 'In Progress'}</li>)}</ul>
+        {!lessons.started && <Link href="/app/learn">Find a lesson to start →</Link>}
+      </section>
+
+      {empty && lessons.started === 0 && (
         <EmptyState title="Nothing to measure yet"
           body="Answer a few questions, run a quiz or review some cards and real figures will appear here. We do not show estimates."
           action={<Link href="/app/quiz" className="btn btn-primary btn-sm">Create a quiz</Link>} />

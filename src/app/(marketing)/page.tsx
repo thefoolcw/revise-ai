@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Reveal } from '@/components/motion/Reveal';
 import { CountUp } from '@/components/motion/CountUp';
-import { AmbientHero } from '@/components/motion/AmbientHero';
 import { TiltCard } from '@/components/motion/TiltCard';
 import { HeroConsole } from '@/components/app/HeroConsole';
 import { getPremiumProduct } from '@/server/premium/product';
@@ -63,9 +62,6 @@ export default async function Home() {
     <>
       {/* ── HERO ─────────────────────────────────────────────────── */}
       <section style={{ position: 'relative', overflow: 'hidden', paddingTop: '3.5rem', paddingBottom: '4.5rem' }}>
-        <div className="ambient" aria-hidden="true" />
-        <div className="ambient-grid" aria-hidden="true" />
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} aria-hidden="true"><AmbientHero /></div>
 
         <div className="container-x" style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'grid', gap: '3rem', alignItems: 'center', gridTemplateColumns: '1fr' }}>
@@ -108,21 +104,6 @@ export default async function Home() {
             </div>
           )}
         </div>
-      </section>
-
-      {/* ── BRAND SHOWCASE ──────────────────────────────────────── */}
-      <section className="container-x" style={{ paddingBlock: '0.5rem 2rem' }}>
-        <Reveal>
-          <figure style={{ margin: 0 }}>
-            <div style={{ borderRadius: '1.2rem', overflow: 'hidden', border: '1px solid rgba(148,163,184,.22)', boxShadow: '0 28px 70px -30px rgba(59,130,246,.45)' }}>
-              <img
-                src="/banner.png"
-                alt="Revise AI — Learn, Revise, Achieve. AI tutoring, revision tools, quizzes and flashcards, progress tracking, notes and documents, and study plans, from nursery to university."
-                style={{ display: 'block', width: '100%', height: 'auto' }}
-              />
-            </div>
-          </figure>
-        </Reveal>
       </section>
 
       {/* ── LIVE REGISTRY (real numbers, labelled as such) ───────── */}
@@ -242,7 +223,6 @@ export default async function Home() {
       <section className="container-x" style={{ paddingBottom: '1rem' }}>
         <Reveal>
           <div className="card" style={{ padding: '2.75rem 1.75rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            <div className="ambient" aria-hidden="true" style={{ opacity: .6 }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <h2 className="h1">Start with what you are studying this week</h2>
               <p className="lede" style={{ maxWidth: 520, margin: '.8rem auto 1.6rem' }}>

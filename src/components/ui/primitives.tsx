@@ -3,7 +3,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from 'react';
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'gold';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   block?: boolean;
@@ -57,8 +57,8 @@ export function Select({ label, hint, error, id, className = '', children, ...re
   );
 }
 
-export function Chip({ children, tone = 'default', className = '' }: { children: ReactNode; tone?: 'default' | 'accent' | 'warn' | 'danger' | 'success'; className?: string }) {
-  const map = { default: '', accent: 'chip-accent', warn: 'chip-warn', danger: 'chip-danger', success: 'chip-success' };
+export function Chip({ children, tone = 'default', className = '' }: { children: ReactNode; tone?: 'default' | 'accent' | 'warn' | 'danger' | 'success' | 'gold'; className?: string }) {
+  const map = { default: '', accent: 'chip-accent', warn: 'chip-warn', danger: 'chip-danger', success: 'chip-success', gold: 'chip-gold' };
   return <span className={`chip ${map[tone]} ${className}`}>{children}</span>;
 }
 

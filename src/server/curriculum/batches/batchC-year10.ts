@@ -1,0 +1,15 @@
+import { year10Geography } from './batchC-year10-geography';
+import { year10History } from './batchC-year10-history';
+import { year10Economics } from './batchC-year10-economics';
+import { year10Business } from './batchC-year10-business';
+import { year10EnglishLiterature } from './batchC-year10-english-literature';
+import { year10EnglishLanguage } from './batchC-year10-english-language';
+import { year10Combined } from './batchC-year10-combined';
+import { year10Computing } from './batchC-year10-computing';
+import { year10Physics } from './batchC-year10-physics';
+import { year10Chemistry } from './batchC-year10-chemistry';
+import { year10Biology } from './batchC-year10-biology';
+import { year10Application } from './batchC-year10-maths-application';
+import { compileActivities } from '../authoredActivities';
+import { year10Number } from './batchC-year10-maths-number';
+export const batchYear10 = compileActivities('year-10', [['maths', [...year10Number, ...year10Application]], year10Biology, year10Chemistry, year10Physics, year10Computing, year10Combined, year10EnglishLanguage, year10EnglishLiterature, year10Business, year10Economics, year10History, year10Geography]);

@@ -1,3 +1,7 @@
+import { subjectMetadata } from '@/server/curriculum/subjectMetadata';
+import { getSubjectAvailability } from '@/server/curriculum/availability';
+import { publishedSubjects } from '@/server/curriculum/selection';
+import { getYearMeta, filterSubjectsForYear } from '@/server/curriculum/types';
 import { z } from 'zod';
 import { eq, sql, and } from 'drizzle-orm';
 import { handler } from '@/server/api/route';
@@ -5,6 +9,7 @@ import { getDb, schema } from '@/server/db';
 import { fuzzyMatch } from '@/server/curriculum/fuzzy';
 
 const Query = z.object({
+  year: z.string().refine(y => !!getYearMeta(y), 'Choose a supported year.').optional(),
   qualification: z.string().max(40).optional(),
   board: z.string().max(40).optional(),
   level: z.string().max(40).optional(),
@@ -19,7 +24,12 @@ export const GET = handler(async (ctx) => {
 
   const boards = await db.select().from(schema.examBoards).where(eq(schema.examBoards.status, 'ACTIVE'));
   const quals = await db.select().from(schema.qualifications).orderBy(schema.qualifications.orderIndex);
-  const subjects = await db.select().from(schema.subjects);
+  const allSubjects = await db.select().from(schema.subjects);
+
+  const year = q.year ?? ctx.user?.yearGroup;
+  const availability = await getSubjectAvailability();
+  const subjects = year ? publishedSubjects(year, filterSubjectsForYear(year, allSubjects), availability)
+    : allSubjects.filter(s => Object.values(availability).some(ids => ids.includes(s.id)));
 
   // Only offer board/qualification combinations that actually exist (§05).
   const validBoardsFor = (qualId?: string) => {
@@ -35,7 +45,7 @@ export const GET = handler(async (ctx) => {
       id: schema.topics.id, slug: schema.topics.slug, title: schema.topics.title,
       parentId: schema.topics.parentId, subjectId: schema.topics.subjectId, provenance: schema.topics.provenance
     }).from(schema.topics)
-      .where(and(eq(schema.topics.subjectId, q.subject), eq(schema.topics.status, 'PUBLISHED')))
+      .where(and(eq(schema.topics.subjectId, q.subject), eq(schema.topics.status, 'PUBLISHED'), year ? eq(schema.topics.yearGroup, year) : undefined))
       .orderBy(schema.topics.orderIndex);
     topicList = rows;
   }
@@ -50,7 +60,8 @@ export const GET = handler(async (ctx) => {
   return {
     boards,
     qualifications: quals,
-    subjects,
+    subjects: subjects.map(subject => ({ ...subject, ...subjectMetadata(subject.id, availability) })),
+    availability,
     topics: topicList,
     validBoardsForQualification: q.qualification ? validBoardsFor(q.qualification) : undefined,
     search: searchResults,

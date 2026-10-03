@@ -3,7 +3,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Select, Alert } from '@/components/ui/primitives';
+import { publishedSubjects, type SubjectAvailability } from '@/server/curriculum/selection';
 import { patch } from '@/lib/client';
+import { filterSubjectsForYear, getYearMeta } from '@/server/curriculum/types';
 import { useToast } from './Toaster';
 
 export type Board = { id: string; name: string; shortName: string; country: string };
@@ -16,10 +18,10 @@ export type Subject = { id: string; name: string; category: string };
  * silently changed by a search (§05).
  */
 export function CurriculumPicker({
-  boards, quals, subjects, current
+  boards, quals, subjects, current, availability
 }: {
-  boards: Board[]; quals: Qual[]; subjects: Subject[];
-  current: { examBoardId: string | null; qualificationId: string | null; subjectIds: string[] };
+  boards: Board[]; quals: Qual[]; subjects: Subject[]; availability: SubjectAvailability;
+  current: { yearGroup: string | null; examBoardId: string | null; qualificationId: string | null; subjectIds: string[] };
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -36,11 +38,12 @@ export function CurriculumPicker({
     [selectedQual, boards]
   );
 
+  const yearSubjects = useMemo(() => publishedSubjects(current.yearGroup, filterSubjectsForYear(current.yearGroup, subjects), availability), [current.yearGroup, subjects, availability]);
   const filtered = useMemo(() => {
     const n = search.trim().toLowerCase();
-    if (!n) return subjects;
-    return subjects.filter((s) => s.name.toLowerCase().includes(n) || s.category.toLowerCase().includes(n) || s.id.includes(n));
-  }, [subjects, search]);
+    if (!n) return yearSubjects;
+    return yearSubjects.filter((s) => s.name.toLowerCase().includes(n) || s.category.toLowerCase().includes(n) || s.id.includes(n));
+  }, [yearSubjects, search]);
 
   const grouped = useMemo(() => {
     const m = new Map<string, Subject[]>();
@@ -52,7 +55,7 @@ export function CurriculumPicker({
     setBusy(true); setError(null);
     try {
       await patch('/api/me', {
-        examBoardId: boardId || null, qualificationId: qualId || null, subjectIds
+        examBoardId: boardId || null, qualificationId: qualId || null, ...(getYearMeta(current.yearGroup) ? { subjectIds: subjectIds.filter(id => yearSubjects.some(s => s.id === id) || current.subjectIds.includes(id)) } : {})
       });
       toast.push('Curriculum saved', 'success');
       router.refresh();
@@ -74,7 +77,7 @@ export function CurriculumPicker({
               if (q && q.boards.length > 0 && !q.boards.includes(boardId)) setBoardId(q.boards[0]!);
             }}>
             <option value="">Not set</option>
-            {quals.map((q) => <option key={q.id} value={q.id}>{q.name}</option>)}
+            {quals.filter(q => q.level === getYearMeta(current.yearGroup)?.ageBand).map((q) => <option key={q.id} value={q.id}>{q.name}</option>)}
           </Select>
           <Select label="Exam board" name="examBoardId" value={boardId} onChange={(e) => setBoardId(e.target.value)}>
             <option value="">Not set</option>

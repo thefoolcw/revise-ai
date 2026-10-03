@@ -1,3 +1,4 @@
+import { getSubjectAvailability } from '@/server/curriculum/availability';
 import { redirect } from 'next/navigation';
 import { OnboardingWizard } from '@/components/app/OnboardingWizard';
 import { getCurrentUser } from '@/server/auth/session';
@@ -13,6 +14,7 @@ export default async function OnboardingPage() {
   if (user.onboardedAt) redirect('/app/dashboard');
 
   const db = await getDb();
+  const availability = await getSubjectAvailability();
   const [boards, quals, subjects] = await Promise.all([
     db.select().from(schema.examBoards).where(eq(schema.examBoards.status, 'ACTIVE')),
     db.select().from(schema.qualifications),
@@ -25,6 +27,7 @@ export default async function OnboardingPage() {
       boards={boards.map((b) => ({ id: b.id, name: b.name, shortName: b.shortName, country: b.country }))}
       quals={quals.map((q) => ({ id: q.id, name: q.name, level: q.level, boards: (q.boards as string[]) ?? [] }))}
       subjects={subjects}
+      availability={availability}
     />
   );
 }

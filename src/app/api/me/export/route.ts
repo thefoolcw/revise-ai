@@ -41,19 +41,22 @@ export async function GET() {
     db.select({ id: schema.flashcardReviews.id, cardId: schema.flashcardReviews.cardId, rating: schema.flashcardReviews.rating, reviewedAt: schema.flashcardReviews.reviewedAt }).from(schema.flashcardReviews).where(eq(schema.flashcardReviews.userId, user.id))
   ]);
 
+  const lessonProgress = await db.select().from(schema.lessonProgress).where(eq(schema.lessonProgress.userId, user.id));
+
   await audit({ actorId: user.id, action: 'DATA_EXPORTED', target: user.id });
 
   const payload = {
     exportedAt: new Date().toISOString(),
     account: { email: user.email, displayName: user.displayName, roles: user.roles },
     profile: profile ? {
+      educationStage: profile.educationStage, yearGroup: profile.yearGroup,
       ageBand: profile.ageBand, country: profile.country, timezone: profile.timezone,
       examBoardId: profile.examBoardId, qualificationId: profile.qualificationId,
       subjectIds: profile.subjectIds, goals: profile.goals, explainLevel: profile.explainLevel,
       targetExamDate: profile.targetExamDate, onboardedAt: profile.onboardedAt
     } : null,
     notes, decks, cards, quizzes, quizAttempts, plans, planItems,
-    studySessions, conversations, messages, flashcardReviews
+    studySessions, conversations, messages, flashcardReviews, lessonProgress
   };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

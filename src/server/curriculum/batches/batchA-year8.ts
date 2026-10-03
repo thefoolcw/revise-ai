@@ -1,0 +1,18 @@
+import { year8Wellbeing } from './batchA-year8-wellbeing';
+import { year8Performance } from './batchA-year8-performance';
+import { year8Creative } from './batchA-year8-creative';
+import { year8Spanish } from './batchA-year8-spanish';
+import { year8German } from './batchA-year8-german';
+import { year8French } from './batchA-year8-french';
+import { year8Religion } from './batchA-year8-religion';
+import { year8Geography } from './batchA-year8-geography';
+import { year8History } from './batchA-year8-history';
+import { year8English } from './batchA-year8-english';
+import { compileActivities } from '../authoredActivities';
+import { year8Maths } from './batchA-year8-maths';
+import { year8Biology } from './batchA-year8-biology';
+import { year8Chemistry } from './batchA-year8-chemistry';
+import { year8Physics } from './batchA-year8-physics';
+import { year8Combined } from './batchA-year8-combined';
+import { year8Computing } from './batchA-year8-computing';
+export const batchYear8 = compileActivities('year-8', [year8Maths, year8Biology, year8Chemistry, year8Physics, year8Combined, year8Computing, ...year8English, year8History, year8Geography, year8Religion, year8French, year8Spanish, year8German, ...year8Creative, ...year8Performance, ...year8Wellbeing]);

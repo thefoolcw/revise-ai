@@ -1,6 +1,9 @@
+import { ContentLessonControls } from '@/components/app/ContentLessonControls';
+import { requireRole } from '@/server/auth/session';
+import { getCurriculumCoverage } from '@/server/curriculum/coverage';
 import { sql } from 'drizzle-orm';
 import { Alert, Chip } from '@/components/ui/primitives';
-import { getDb } from '@/server/db';
+import { getDb, schema } from '@/server/db';
 
 export const metadata = { title: 'Content' };
 export const dynamic = 'force-dynamic';
@@ -9,7 +12,10 @@ type Row = Record<string, unknown>;
 const rows = (r: unknown): Row[] => ((r as { rows?: Row[] }).rows ?? r) as Row[];
 
 export default async function AdminContent() {
+  await requireRole('ADMIN', 'CONTENT_EDITOR');
+  const coverage = await getCurriculumCoverage();
   const db = await getDb();
+  const lessonMetadata = await db.select({ id: schema.lessons.id, title: schema.lessons.title, yearGroup: schema.lessons.yearGroup, status: schema.lessons.status, isPremium: schema.lessons.isPremium }).from(schema.lessons).orderBy(schema.lessons.yearGroup, schema.lessons.title);
   const [provRes, specsRes, docsRes] = await Promise.all([
     db.execute(sql`SELECT provenance, status, COUNT(*)::int AS n FROM topics GROUP BY 1,2 ORDER BY n DESC`),
     db.execute(sql`SELECT id, code, title, board_id, qualification_id, content_version AS version, verified_at, source_url
@@ -30,10 +36,19 @@ export default async function AdminContent() {
         </p>
       </header>
 
+      <ContentLessonControls lessons={lessonMetadata} />
+      <section className="card card-pad stack gap-3">
+        <h2 className="h3">Published lesson coverage</h2>
+        <p className="muted">A covered subject has at least two topics, each with multiple lessons and both Free and Premium access. Counts do not certify syllabus completeness or educational review.</p>
+        <div className="table-wrap"><table className="data"><thead><tr><th>Year</th><th>Covered subjects</th><th>Lessons</th><th>Needs content</th></tr></thead><tbody>
+          {coverage.map(y => <tr key={y.year}><td>{y.label}</td><td>{y.coveredSubjects}/{y.subjects.length}</td><td>{y.lessons}</td><td>{y.subjects.filter(s => !s.covered).map(s => s.subject).join(', ') || 'Structural coverage met'}</td></tr>)}
+        </tbody></table></div>
+      </section>
+
       {specs.length === 0 && (
         <Alert tone="warning" title={`${illustrative} topics are illustrative`}>
-          No verified specifications have been attached. Every topic tree in the catalogue is marked{' '}
-          <code>ILLUSTRATIVE</code> and the API returns a provenance note saying so. Board and qualification
+          No verified specifications have been attached. Legacy topic trees are marked{' '}
+          <code>ILLUSTRATIVE</code>; authored lessons are marked ORIGINAL, not officially verified. Board and qualification
           names remain accurate.
         </Alert>
       )}

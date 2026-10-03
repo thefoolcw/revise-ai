@@ -1,3 +1,7 @@
+import { publishedSubjects } from '@/server/curriculum/selection';
+import { getSubjectAvailability } from '@/server/curriculum/availability';
+import { SubjectManager } from '@/components/app/SubjectManager';
+import { getYearMeta, filterSubjectsForYear } from '@/server/curriculum/types';
 import Link from 'next/link';
 import { sql, eq, desc, and, gte, lte } from 'drizzle-orm';
 import { Reveal } from '@/components/motion/Reveal';
@@ -15,6 +19,11 @@ export default async function Dashboard() {
   const user = await getCurrentUser();
   if (!user) return null;
   const db = await getDb();
+  const availability = await getSubjectAvailability();
+  const availableSubjects = await db.select({ id: schema.subjects.id, name: schema.subjects.name }).from(schema.subjects);
+  const year = getYearMeta(user.yearGroup);
+  const validSubjects = publishedSubjects(user.yearGroup, filterSubjectsForYear(user.yearGroup, availableSubjects), availability);
+  const mySubjects = validSubjects.filter(s => user.subjectIds.includes(s.id));
   const since = new Date(Date.now() - 29 * 864e5);
 
   const [usage, access, dueRows, planRows, recentNotes, sessRows, recentConvs, quizRows] = await Promise.all([
@@ -55,6 +64,16 @@ export default async function Dashboard() {
           <h1 className="h1" style={{ marginTop: '.2rem' }}>Hello, {user.displayName.split(' ')[0]}</h1>
         </header>
       </Reveal>
+
+      <section className="card card-pad stack gap-3" aria-labelledby="my-subjects-title">
+        <div className="row spread wrap gap-2">
+          <div><h2 id="my-subjects-title" className="h3">MY SUBJECTS</h2><p className="muted">{year?.fullLabel ?? 'Choose your year in Settings'}</p></div>
+          {year ? <SubjectManager availability={availability} yearGroup={year.id} selectedIds={user.subjectIds} subjects={availableSubjects} /> : <Link href="/app/settings">Choose year & subjects →</Link>}
+        </div>
+        {mySubjects.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.8rem' }}>
+          {mySubjects.map(s => <Link className="card card-pad" key={s.id} href={`/app/subjects/${s.id}`}>{s.name} →</Link>)}
+        </div> : <p className="muted">Your chosen subjects will appear here. Add a subject to personalise your dashboard.</p>}
+      </section>
 
       <Reveal delay={60}>
         <div style={{ display: 'grid', gap: '.8rem', gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))' }}>

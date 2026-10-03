@@ -26,6 +26,8 @@ export const profiles = pgTable('profiles', {
   userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   displayName: text('display_name').notNull(),
   ageBand: text('age_band').notNull().default('SECONDARY'),
+  educationStage: text('education_stage'),
+  yearGroup: text('year_group'),
   country: text('country').notNull().default('GB'),
   timezone: text('timezone').notNull().default('Europe/London'),
   examBoardId: text('exam_board_id'),
@@ -130,6 +132,8 @@ export const topics = pgTable('topics', {
   parentId: text('parent_id'),
   subjectId: text('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
   specificationId: text('specification_id').references(() => specifications.id, { onDelete: 'cascade' }),
+  educationStage: text('education_stage'),
+  yearGroup: text('year_group'),
   title: text('title').notNull(),
   summary: text('summary'),
   orderIndex: integer('order_index').notNull().default(0),
@@ -137,7 +141,65 @@ export const topics = pgTable('topics', {
   status: text('status').notNull().default('PUBLISHED'),
   createdAt: createdAt(),
   updatedAt: updatedAt()
-}, (t) => [index('topics_subject_idx').on(t.subjectId), uniqueIndex('topics_slug_uq').on(t.slug)]);
+}, (t) => [
+  index('topics_subject_idx').on(t.subjectId),
+  index('topics_year_subject_idx').on(t.yearGroup, t.subjectId),
+  uniqueIndex('topics_slug_uq').on(t.slug)
+]);
+
+export const lessons = pgTable('lessons', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull(),
+  educationStage: text('education_stage').notNull(),
+  yearGroup: text('year_group').notNull(),
+  subjectId: text('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
+  topicSlug: text('topic_slug').notNull(),
+  topicTitle: text('topic_title').notNull(),
+  subtopicTitle: text('subtopic_title').notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  difficulty: text('difficulty').notNull().default('Core'),
+  isPremium: boolean('is_premium').notNull().default(false),
+  estimatedMinutes: integer('estimated_minutes').notNull().default(15),
+  orderIndex: integer('order_index').notNull().default(0),
+  learningObjectives: jsonb('learning_objectives').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  priorKnowledgeCheck: jsonb('prior_knowledge_check').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  content: jsonb('content').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  examples: jsonb('examples').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  memoryTips: jsonb('memory_tips').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  commonMistakes: jsonb('common_mistakes').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  quickRecall: jsonb('quick_recall').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  practiceQuestions: jsonb('practice_questions').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  answers: jsonb('answers').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+  recap: jsonb('recap').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  spacedRevisionSuggestion: text('spaced_revision_suggestion'),
+  status: text('status').notNull().default('PUBLISHED'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt()
+}, (t) => [
+  uniqueIndex('lessons_slug_uq').on(t.slug),
+  index('lessons_year_subject_idx').on(t.yearGroup, t.subjectId),
+  index('lessons_topic_idx').on(t.topicSlug)
+]);
+
+export const lessonProgress = pgTable('lesson_progress', {
+  id: id(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  lessonId: text('lesson_id').notNull(),
+  subjectId: text('subject_id').notNull(),
+  yearGroup: text('year_group').notNull(),
+  status: text('status').notNull().default('IN_PROGRESS'),
+  practiceAttempted: integer('practice_attempted').notNull().default(0),
+  practiceCorrect: integer('practice_correct').notNull().default(0),
+  lastScorePercent: integer('last_score_percent'),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  lastVisitedAt: timestamp('last_visited_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: updatedAt()
+}, (t) => [
+  uniqueIndex('lesson_progress_user_lesson_uq').on(t.userId, t.lessonId),
+  index('lesson_progress_user_subject_idx').on(t.userId, t.subjectId)
+]);
 
 export const contentSources = pgTable('content_sources', {
   id: id(),
