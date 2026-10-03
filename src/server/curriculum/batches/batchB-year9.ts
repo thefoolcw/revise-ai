@@ -1,3 +1,5 @@
+import { year9World } from './batchB-year9-world';
+import { year9English } from './batchB-year9-english';
 import { year9Combined } from './batchB-year9-combined';
 import { year9Physics } from './batchB-year9-physics';
 import { year9Computing } from './batchB-year9-computing';
@@ -5,4 +7,4 @@ import { year9Biology } from './batchB-year9-biology';
 import { year9Chemistry } from './batchB-year9-chemistry';
 import { compileActivities } from '../authoredActivities';
 import { year9Maths } from './batchB-year9-maths';
-export const batchYear9 = compileActivities('year-9', [year9Maths, year9Biology, year9Chemistry, year9Physics, year9Computing, year9Combined]);
+export const batchYear9 = compileActivities('year-9', [year9Maths, year9Biology, year9Chemistry, year9Physics, year9Computing, year9Combined, ...year9English, ...year9World]);
